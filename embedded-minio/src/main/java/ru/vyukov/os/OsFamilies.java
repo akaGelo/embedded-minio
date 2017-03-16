@@ -20,10 +20,17 @@ public enum OsFamilies {
 		final String name = System.getProperty("os.name").toLowerCase();
 		Predicate<? super Entry<String, OsFamilies>> predicate = entry -> name.contains((entry.getKey()));
 		current = keys.entrySet().stream().filter(predicate).map(Entry::getValue).findFirst().orElse(OTHER);
-
 	}
 
 	public static OsFamilies getCurrent() {
 		return current;
+	}
+
+	/**
+	 * Test current os
+	 * @return true if current os Linux
+	 */
+	public static boolean isLinux() {
+		return current.equals(LINUX);
 	}
 }
