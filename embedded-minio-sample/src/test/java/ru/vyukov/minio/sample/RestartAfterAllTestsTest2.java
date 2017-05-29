@@ -3,6 +3,7 @@ package ru.vyukov.minio.sample;
 import static org.junit.Assert.assertNotNull;
 import static ru.vyukov.minio.sample.TestSuite.getMinio;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -10,6 +11,7 @@ import org.junit.Test;
  * @author gelo
  *
  */
+@Ignore
 public class RestartAfterAllTestsTest2 {
 
 	@Test
