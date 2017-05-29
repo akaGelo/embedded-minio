@@ -24,6 +24,22 @@
 		<module>embedded-minio-sample</module>
 	</modules>
 
+	<scm>
+		<developerConnection>scm:git:git@github.com:akaGelo/embedded-minio.git</developerConnection>
+	</scm>
+
+	<distributionManagement>
+		<repository>
+			<id>nexus-vyukov-ru</id>
+			<url>https://nexus.vyukov.ru/repository/maven-releases/</url>
+		</repository>
+		<snapshotRepository>
+			<id>nexus-vyukov-ru-snapshots</id>
+			<url>https://nexus.vyukov.ru/repository/maven-snapshots/</url>
+		</snapshotRepository>
+
+	</distributionManagement>
+
 	<build>
 		<plugins>
 			<plugin>
@@ -33,6 +49,18 @@
 				<configuration>
 					<source>${java.version}</source>
 					<target>${java.version}</target>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-release-plugin</artifactId>
+				<version>2.5.3</version>
+				<configuration>
+					<tagNameFormat>v@{project.version}</tagNameFormat>
+					<checkModificationExcludes>
+						<checkModificationExclude>pom.xml</checkModificationExclude>
+					</checkModificationExcludes>
 				</configuration>
 			</plugin>
 		</plugins>
@@ -69,7 +97,7 @@
 
 
 
-		
+
 
 		<dependency>
 			<groupId>junit</groupId>

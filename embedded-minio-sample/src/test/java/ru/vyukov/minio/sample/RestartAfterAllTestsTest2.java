@@ -16,6 +16,9 @@ public class RestartAfterAllTestsTest2 {
 	public void exampleTest1() {
 		String accessKey = getMinio().getAccessKey();
 		assertNotNull(accessKey);
+		
+		String bucket = getMinio().getDefaultBucket();
+		assertNotNull(bucket);
 
 	}
 
@@ -23,6 +26,9 @@ public class RestartAfterAllTestsTest2 {
 	public void exampleTest2() {
 		String secretKey = getMinio().getSecretKey();
 		assertNotNull(secretKey);
+		
+		String bucket = getMinio().getDefaultBucket();
+		assertNotNull(bucket);
 	}
 
 }

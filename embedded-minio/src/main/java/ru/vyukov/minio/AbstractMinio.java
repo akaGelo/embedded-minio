@@ -7,6 +7,8 @@ import static ru.vyukov.minio.MinioEnvVariables.MINIO_SECRET_KEY;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,18 +23,25 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.event.Level;
 
+import io.minio.MinioClient;
+import lombok.SneakyThrows;
 import ru.vyukov.os.OsArch;
 import ru.vyukov.os.OsFamilies;
 
 /**
  * Abstract Minio wrapper
+ * 
  * @author gelo
  *
  */
 abstract class AbstractMinio implements Minio {
 
-	private final static String MINIO_BINARY_FILE = "/minio/" + OsFamilies.getCurrent()
-			+ "/" + OsArch.getCurrent() + "/minio";
+	private final static String MINIO_BINARY_FILE = "/minio/" + OsFamilies.getCurrent() + "/" + OsArch.getCurrent()
+			+ "/minio";
+
+	private final static String DEF_BUCKET = "embeded-minio";
+
+	private final static int port = 9000;
 
 	private final File storageFolder;
 
@@ -50,8 +59,9 @@ abstract class AbstractMinio implements Minio {
 	public AbstractMinio(File storageFolder) {
 		this(storageFolder, new HashMap<MinioEnvVariables, String>() {
 			{
-				put(MINIO_ACCESS_KEY, generateKey(20)); // copy is default minio key
-				put(MINIO_SECRET_KEY, generateKey(40));
+				put(MINIO_ACCESS_KEY, generateKey(10)); // copy is default minio
+														// key
+				put(MINIO_SECRET_KEY, generateKey(20));
 			}
 		});
 	}
@@ -75,12 +85,10 @@ abstract class AbstractMinio implements Minio {
 		this.storageFolder = storageFolder;
 
 		if (!envelopment.containsKey(MINIO_ACCESS_KEY))
-			throw new IllegalArgumentException(
-					"envelopmnent['MINIO_ACCESS_KEY'] can not be null");
+			throw new IllegalArgumentException("envelopmnent['MINIO_ACCESS_KEY'] can not be null");
 
 		if (!envelopment.containsKey(MINIO_SECRET_KEY))
-			throw new IllegalArgumentException(
-					"envelopmnent['MINIO_SECRET_KEY'] can not be null");
+			throw new IllegalArgumentException("envelopmnent['MINIO_SECRET_KEY'] can not be null");
 
 		this.envelopment = Collections.unmodifiableMap(envelopment);
 	}
@@ -100,8 +108,8 @@ abstract class AbstractMinio implements Minio {
 		executeResultHandler = new DefaultExecuteResultHandler();
 		shutdownHookProcessDestroyer = new ShutdownHookProcessDestroyer();
 
-		PumpStreamHandler streamHandler = new PumpStreamHandler(
-				new Sl4jLogOutputStream(INFO), new Sl4jLogOutputStream(Level.ERROR));
+		PumpStreamHandler streamHandler = new PumpStreamHandler(new Sl4jLogOutputStream(INFO),
+				new Sl4jLogOutputStream(Level.ERROR));
 
 		executor = new DefaultExecutor();
 		executor.setStreamHandler(streamHandler);
@@ -111,26 +119,24 @@ abstract class AbstractMinio implements Minio {
 			CommandLine command = new CommandLine(tmpMinioFile);
 			command.addArgument("server").addArgument(storageFolder.getAbsolutePath());
 			executor.execute(command, toStringKeyMap(envelopment), executeResultHandler);
-		}
-		catch (IOException e) {
+		} catch (IOException e) {
 			throw new MinioStartException("Error on run minio", e);
 		}
 	}
 
 	/**
 	 * Extract Minio server to FS
+	 * 
 	 * @return executable Minio server file
 	 * @throws MinioStartException
 	 */
 	protected File initTmpMinitServerFile() throws MinioStartException {
 		File tmpMinioFile = null;
-		try (InputStream inputStream = getClass()
-				.getResourceAsStream(MINIO_BINARY_FILE)) {
+		try (InputStream inputStream = getClass().getResourceAsStream(MINIO_BINARY_FILE)) {
 			tmpMinioFile = File.createTempFile("minio", null);
 			FileUtils.copyInputStreamToFile(inputStream, tmpMinioFile);
 			tmpMinioFile.setExecutable(true);
-		}
-		catch (IOException | NullPointerException e) {
+		} catch (IOException | NullPointerException e) {
 			throw new MinioStartException("Error on create minio executable file", e);
 		}
 		return tmpMinioFile;
@@ -182,14 +188,33 @@ abstract class AbstractMinio implements Minio {
 		return envelopment.get(MINIO_SECRET_KEY);
 	}
 
+	@Override
+	@SneakyThrows(UnknownHostException.class)
+	public String getEndpoint() {
+		String host = InetAddress.getLocalHost().getHostAddress();
+		return "http://" + host + ":" + port;
+	}
+
 	private static String generateKey(int count) {
 		return RandomStringUtils.random(count, true, true);
 	}
 
-	private Map<String, String> toStringKeyMap(
-			Map<MinioEnvVariables, String> envelopment) {
-		Map<String, String> strEvn = envelopment.entrySet().stream().collect(Collectors
-				.toMap(e -> e.getKey().toString(), e -> e.getValue().toString()));
+	@Override
+	synchronized public String getDefaultBucket() throws MinioRuntimeException {
+		try {
+			MinioClient minioClient = new MinioClient(getEndpoint(), getAccessKey(), getSecretKey());
+			if (!minioClient.bucketExists(DEF_BUCKET)) {
+				minioClient.makeBucket(DEF_BUCKET);
+			}
+			return DEF_BUCKET;
+		} catch (Exception e) {
+			throw new MinioRuntimeException("Error on create bucket", e);
+		}
+	}
+
+	private Map<String, String> toStringKeyMap(Map<MinioEnvVariables, String> envelopment) {
+		Map<String, String> strEvn = envelopment.entrySet().stream()
+				.collect(Collectors.toMap(e -> e.getKey().toString(), e -> e.getValue().toString()));
 		return strEvn;
 	}
 }

@@ -11,29 +11,23 @@ import ru.vyukov.junit.MinioServerTestRule;
 
 /**
  * This approach is not optimal. See {@link ru.vyukov.minio.sample.TestSuite}
+ * 
  * @author gelo
  *
  */
 public class RestartEveryTest {
 
 	@Rule
-	public TemporaryFolder folder = new TemporaryFolder();
-
-	@Rule
-	public MinioServerTestRule minioServerTestRule = new MinioServerTestRule(
-			folder.getRoot());
+	public MinioServerTestRule minioServerTestRule = new MinioServerTestRule();
 
 	@Test
 	public void exampleTest1() {
 		String accessKey = getMinio().getAccessKey();
 		assertNotNull(accessKey);
 
-	}
+		String bucket = getMinio().getDefaultBucket();
+		assertNotNull(bucket);
 
-	@Test
-	public void exampleTest2() {
-		String secretKey = getMinio().getSecretKey();
-		assertNotNull(secretKey);
 	}
 
 }
